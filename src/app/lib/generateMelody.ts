@@ -1,26 +1,55 @@
 import * as Tone from 'tone'
 
 export const generateMelody = async ({ bpm, mode, chords, duration }: any) => {
-  Tone.Transport.bpm.value = bpm;
-  const synth = new Tone.Synth({
-    oscillator: { type: "sine" }, // Usar una onda suave como "sine" o "triangle"
-    envelope: {
-      attack: 0.7,  // Un ataque rápido como el de las cuerdas de una guitarra
-      decay: 1,    // El tiempo que tarda en decaer
-      sustain: 0.6,  // La parte donde el sonido se mantiene después del decay
-      release: 1,  // El tiempo que tarda en apagarse
-    },
-  }).toDestination();
+  Tone.getTransport().bpm.value = bpm;
+  // const synth = new Tone.Synth({
+  //   oscillator: { type: "sine" }, // Usar una onda suave como "sine" o "triangle"
+  //   envelope: {
+  //     attack: 0.1,  // Un ataque rápido como el de las cuerdas de una guitarra
+  //     decay: 1,    // El tiempo que tarda en decaer
+  //     sustain: 0.6,  // La parte donde el sonido se mantiene después del decay
+  //     release: 1,  // El tiempo que tarda en apagarse
+  //   },
+  // }).toDestination();
+
+  // Cargar los samples de forma explícita con Tone.Buffer
+  const buffers: { [key: string]: Tone.Buffer } = {};
+  const sampleUrls = {
+    'A4': '/samples/samples_guitar-acoustic_A4.wav',
+    'B4': '/samples/samples_guitar-acoustic_B4.wav',
+    'C4': '/samples/samples_guitar-acoustic_C4.wav',
+    'D4': '/samples/samples_guitar-acoustic_D4.wav',
+    'E4': '/samples/samples_guitar-acoustic_E4.wav',
+    'F4': '/samples/samples_guitar-acoustic_F4.wav',
+    'G4': '/samples/samples_guitar-acoustic_G4.wav',
+  };
+
+  // Cargar los buffers de todos los samples
+  await Promise.all(
+    Object.keys(sampleUrls).map(async (note) => {
+      buffers[note] = await Tone.Buffer.fromUrl(sampleUrls[note]);
+    })
+  );
+
+  // Crear el sampler con los buffers cargados
+  const synth = new Tone.Sampler(buffers).toDestination();
   
+  const guitarTechniques = [
+    { name: 'hammer-on', probablity: 1 },
+    { name: 'pull-off', probablity: 1 },
+    { name: 'slide', probablity: 1 },
+    { name: 'palm-mute', probablity: 1 }
+  ];
+
   // Agregar efectos como reverb y chorus para emular mejor la guitarra
-  const reverb = new Tone.Reverb(5).toDestination(); // Reverb para dar profundidad
+  const reverb = new Tone.Reverb(2).toDestination(); // Reverb para dar profundidad
   synth.connect(reverb);
   
   const chorus = new Tone.Chorus(4, 2.5, 0.5).toDestination(); // Chorus para simular la modulación de una guitarra
   synth.connect(chorus);
 
-  const filter = new Tone.Filter(1000, "peaking").toDestination();
-synth.connect(filter);
+  // const filter = new Tone.Filter(100, "peaking").toDestination();
+  // synth.connect(filter);
 
   // Modos con octava
   const modes = {
@@ -100,7 +129,7 @@ synth.connect(filter);
     ...diminishedChords,
   };
 
-  const modeNotes = modes[mode];
+  const modeNotes = modes[mode as keyof typeof modes];
   const melody: any[] = [];
   const timeStep = 60 / bpm;
   let previousTime = Tone.now(); // Initialize previous time
@@ -121,6 +150,10 @@ synth.connect(filter);
       const randomIndex = Math.floor(Math.random() * modeNotes.length);
       note = modeNotes[randomIndex];
     }
+
+    const technique = guitarTechniques.find(
+      t => Math.random() < t.probablity
+    );
   
     // Variación rítmica
     const noteDuration = ["8n", "16n", "4n"][Math.floor(Math.random() * 3)];
@@ -132,7 +165,7 @@ synth.connect(filter);
     // Variación dinámica
     const velocity = 0.5 + Math.random() * 0.5;
     
-    melody.push({ note, time: startTime });
+    melody.push({ note, time: startTime ,  technique: technique?.name,velocity});
     
     // Reproducir la nota
     synth.triggerAttackRelease(note, noteDuration, startTime, velocity);
