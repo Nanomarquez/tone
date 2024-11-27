@@ -15,7 +15,7 @@ const Home = () => {
     <div className="min-h-screen bg-gray-50 p-4">
       <MelodyControls onGenerate={handleGenerate} />
       {melody.length > 0 && (
-        <div>
+        <div className="text-black">
           <h3 className="mt-4 text-lg font-semibold">Melodía generada:</h3>
           <ul>
             {melody.map((note, index) => (
